@@ -1,25 +1,55 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import api from '../utils/api';
 
 export const Login: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
+
         try {
-            const { data } = await api.post('/auth/login', { email, password });
-            login(data);
-            navigate('/dashboard');
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Login failed');
+            // 1. Retrieve Users safely
+            let users: any[] = [];
+            try {
+                const storedUsers = localStorage.getItem("users");
+                const parsed = storedUsers ? JSON.parse(storedUsers) : [];
+                if (Array.isArray(parsed)) {
+                    users = parsed;
+                }
+            } catch (error) {
+                console.error("Login read error", error);
+                users = [];
+            }
+
+            // 2. Validate Credentials
+            const safeEmail = email.trim().toLowerCase();
+
+            const user = users.find((u: any) =>
+                u && u.email &&
+                u.email.toString().trim().toLowerCase() === safeEmail &&
+                u.password === password // Simple checking for demo
+            );
+
+            if (user) {
+                // 3. Success -> Update Session
+                // Ensure token exists for TS (storage.login will overwrite/add it anyway)
+                login({ ...user, token: user.token || 'mock-login-token' });
+                navigate('/dashboard');
+            } else {
+                setError('Invalid email or password');
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Login failed due to application error');
         }
     };
 
@@ -46,7 +76,7 @@ export const Login: React.FC = () => {
                     <Button fullWidth size="lg">Login</Button>
                 </form>
                 <p className="mt-4 text-center text-sm text-gray-600">
-                    Don't have an account? <a href="/signup" className="text-primary hover:underline">Sign up</a>
+                    Don't have an account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
                 </p>
             </div>
         </div>
