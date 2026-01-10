@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import api from '../utils/api';
@@ -10,15 +10,14 @@ export const Signup: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const { login } = useAuth();
-    const navigate = useNavigate();
+    
+    
 
 const handleSignup = (e: React.FormEvent) => {
   e.preventDefault();
 
   const users = JSON.parse(localStorage.getItem("users") || "[]");
 
-  // 🔴 CHECK IF USER ALREADY EXISTS
   const existingUser = users.find(
     (u: any) => u.email === email
   );
@@ -28,22 +27,19 @@ const handleSignup = (e: React.FormEvent) => {
     return;
   }
 
-  // 🟢 CREATE NEW USER
   const newUser = {
     name,
     email,
     password,
   };
 
-  // 🟢 SAVE USER
   users.push(newUser);
   localStorage.setItem("users", JSON.stringify(users));
-
-  // 🟢 AUTO LOGIN
   localStorage.setItem("currentUser", JSON.stringify(newUser));
 
   navigate("/dashboard");
 };
+
 
 
 
@@ -52,7 +48,7 @@ const handleSignup = (e: React.FormEvent) => {
             <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border">
                 <h2 className="text-2xl font-bold mb-6 text-center">Create Account</h2>
                 {error && <div className="bg-red-50 text-red-500 p-3 rounded mb-4 text-sm">{error}</div>}
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSignup} className="space-y-4">
                     <Input
                         label="Name"
                         value={name}
