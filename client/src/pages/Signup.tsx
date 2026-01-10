@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
 
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -12,15 +13,22 @@ export const Signup: React.FC = () => {
     const [error, setError] = useState('');
     
     
+useEffect(() => {
+  const users = localStorage.getItem("users");
+  if (!users) {
+    localStorage.setItem("users", JSON.stringify([]));
+  }
+}, []);
 
 const handleSignup = (e: React.FormEvent) => {
   e.preventDefault();
 
   const users = JSON.parse(localStorage.getItem("users") || "[]");
 
-  const existingUser = users.find(
-    (u: any) => u.email === email
-  );
+const existingUser = users.find(
+  (u: any) => u.email.toLowerCase().trim() === email.toLowerCase().trim()
+);
+
 
   if (existingUser) {
     setError("User already exists");
