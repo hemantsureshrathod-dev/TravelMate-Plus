@@ -13,16 +13,39 @@ export const Signup: React.FC = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            const { data } = await api.post('/auth/signup', { name, email, password });
-            login(data);
-            navigate('/dashboard'); // Redirect to dashboard after signup
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Signup failed');
-        }
-    };
+const handleSignup = (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const users = JSON.parse(localStorage.getItem("users") || "[]");
+
+  // 🔴 CHECK IF USER ALREADY EXISTS
+  const existingUser = users.find(
+    (u: any) => u.email === email
+  );
+
+  if (existingUser) {
+    setError("User already exists");
+    return;
+  }
+
+  // 🟢 CREATE NEW USER
+  const newUser = {
+    name,
+    email,
+    password,
+  };
+
+  // 🟢 SAVE USER
+  users.push(newUser);
+  localStorage.setItem("users", JSON.stringify(users));
+
+  // 🟢 AUTO LOGIN
+  localStorage.setItem("currentUser", JSON.stringify(newUser));
+
+  navigate("/dashboard");
+};
+
+
 
     return (
         <div className="flex items-center justify-center min-h-[80vh]">
