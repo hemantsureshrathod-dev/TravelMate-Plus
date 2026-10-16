@@ -1,29 +1,57 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap');
-
 @import "tailwindcss";
-@config "../tailwind.config.js";
 
 @layer base {
-    body {
-        @apply font-sans antialiased bg-gray-50 text-slate-800;
-    }
+  :root {
+    --bg-main: #F3F5F4;
+    --surface: #FFFFFF;
+    --primary-accent: #5E8CA6;
+    --primary-hover: #4D768E;
+    --accent-surface: #DDE8EC;
+    --accent-light: #F0F5F7;
+    --primary-text: #26333A;
+    --secondary-text: #6C7A80;
+    --border-subtle: #DCE3E5;
+    --border-hover: #C5D1D5;
+  }
 
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-        @apply font-display tracking-tight;
-    }
+  * {
+    border-color: var(--border-subtle);
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--primary-text);
+    font-family: 'DM Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--primary-text);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
 }
 
-@layer components {
-    .glass {
-        @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl;
-    }
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F3F5F4;
+}
+::-webkit-scrollbar-thumb {
+  background: #C5D1D5;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #AABEC5;
+}
 
-    .glass-dark {
-        @apply bg-black/70 backdrop-blur-lg border border-white/10 shadow-xl text-white;
-    }
+/* Leaflet container fixes */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  z-index: 10;
 }

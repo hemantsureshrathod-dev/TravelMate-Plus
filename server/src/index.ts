@@ -1,44 +1,32 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import { app } from './app.js';
+import { connectDB, disconnectDB } from './config/db.js';
+import { env } from './config/env.js';
 
-dotenv.config();
+async function bootstrap() {
+  try {
+    console.log('[Server] Connecting to MongoDB...');
+    await connectDB();
 
-import authRoutes from './routes/auth';
-import aiRoutes from './routes/ai';
-import placeRoutes from './routes/places';
-import tripRoutes from './routes/trips';
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json());
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/chat', aiRoutes);
-app.use('/api/places', placeRoutes);
-app.use('/api/trips', tripRoutes);
-
-// Basic Route
-app.get('/', (req, res) => {
-    res.send('TravelMate+ API is running');
-});
-
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI as string)
-    .then(() => {
-        console.log('✅ Connected to MongoDB');
-        app.listen(PORT, () => {
-            console.log(`🚀 Server running on port ${PORT}`);
-            console.log(`📍 API Base URL: http://localhost:${PORT}/api`);
-            console.log(`🤖 AI Service: ${process.env.AI_API_KEY ? '✅ Enabled (Gemini)' : '⚠️  Fallback Mode (No API Key)'}`);
-        });
-    })
-    .catch((err) => {
-        console.error('❌ MongoDB connection error:', err);
-        console.error('💡 Make sure MongoDB is running and MONGO_URI is set correctly');
-        process.exit(1);
+    const server = app.listen(env.PORT, () => {
+      console.log(`[Server] TravelMate+ API Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
+      console.log(`[Server] Health check: http://localhost:${env.PORT}/api/health`);
     });
+
+    const shutdown = async (signal: string) => {
+      console.log(`\n[Server] Received ${signal}. Gracefully terminating...`);
+      server.close(async () => {
+        await disconnectDB();
+        console.log('[Server] Process exited gracefully.');
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+  } catch (error) {
+    console.error('[Server] Fatal startup error:', error);
+    process.exit(1);
+  }
+}
+
+bootstrap();
