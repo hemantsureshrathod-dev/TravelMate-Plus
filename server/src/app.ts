@@ -12,22 +12,66 @@ import destinationRoutes from './routes/destination.routes.js';
 
 export const app = express();
 
+// Trust reverse proxy (e.g. Render, Railway, AWS ALB, Vercel)
+// Trusting 1 hop ensures the front-most proxy IP is used for rate limiting and client IP resolution,
+// while preventing spoofed X-Forwarded-For headers from untrusted clients.
+app.set('trust proxy', 1);
+
+// Helper function to validate allowed origins
+export function isAllowedOrigin(origin?: string, nodeEnv: string = env.NODE_ENV): boolean {
+  // Allow requests with no origin (like mobile apps, curl, or supertest)
+  if (!origin) return true;
+
+  // Allow explicit client origin configured in environment
+  if (origin === env.CLIENT_ORIGIN) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(origin);
+
+    // In non-production, allow localhost and loopback development servers
+    if (nodeEnv !== 'production') {
+      if (
+        parsed.hostname === 'localhost' ||
+        parsed.hostname === '127.0.0.1' ||
+        parsed.hostname === '[::1]'
+      ) {
+        return true;
+      }
+    }
+
+    // Allow production domain and project-scoped preview Vercel deployments (HTTPS only)
+    if (parsed.protocol === 'https:') {
+      // Exact production domain
+      if (parsed.hostname === 'travel-mate-plus.vercel.app') {
+        return true;
+      }
+      // Project preview deployments: travel-mate-plus-<branch/hash>.vercel.app
+      if (
+        parsed.hostname.startsWith('travel-mate-plus-') &&
+        parsed.hostname.endsWith('.vercel.app')
+      ) {
+        return true;
+      }
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
 // Security middleware
 app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or supertest)
-      if (!origin) return callback(null, true);
-      // In development or if origin matches client origin
-      if (
-        env.NODE_ENV !== 'production' ||
-        origin === env.CLIENT_ORIGIN ||
-        origin.endsWith('.vercel.app')
-      ) {
+      if (isAllowedOrigin(origin)) {
         return callback(null, true);
       }
-      return callback(new Error('Blocked by CORS policy'));
+      // Disallow origin cleanly without throwing a 500 error
+      return callback(null, false);
     },
     credentials: true,
   })

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
-import { app } from '../app.js';
+import { app, isAllowedOrigin } from '../app.js';
 import { connectDB, disconnectDB } from '../config/db.js';
 import { User } from '../models/User.js';
 import { Trip } from '../models/Trip.js';
@@ -303,5 +303,63 @@ describe('4. AI Itinerary Generation Validation', () => {
     if (res.status !== 200) {
       expect(res.body).toHaveProperty('error');
     }
+  }, 40000);
+});
+
+describe('5. Security & Pre-Deployment Hardening', () => {
+  it('Express trust proxy should be set to 1 for reverse-proxy architectures', () => {
+    expect(app.get('trust proxy')).toBe(1);
+  });
+
+  it('CORS preflight from allowed production Vercel domain should succeed with 204 and Access-Control-Allow-Origin header', async () => {
+    const res = await request(app)
+      .options('/api/health')
+      .set('Origin', 'https://travel-mate-plus.vercel.app')
+      .set('Access-Control-Request-Method', 'GET');
+    expect(res.status).toBe(204);
+    expect(res.headers['access-control-allow-origin']).toBe('https://travel-mate-plus.vercel.app');
+  });
+
+  it('CORS request from allowed production Vercel domain should receive Access-Control-Allow-Origin header', async () => {
+    const res = await request(app)
+      .get('/api/health')
+      .set('Origin', 'https://travel-mate-plus.vercel.app');
+    expect(res.status).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBe('https://travel-mate-plus.vercel.app');
+  });
+
+  it('CORS request from untrusted origin should NOT receive Access-Control-Allow-Origin header and NOT cause a 500 error', async () => {
+    const res = await request(app)
+      .get('/api/health')
+      .set('Origin', 'https://unauthorized-attacker-site.com');
+    // Endpoint executes normally without 500 crash
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('ok');
+    // Access-Control-Allow-Origin header MUST be omitted for disallowed origin
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('isAllowedOrigin should enforce tight allowlist for production and legitimate preview domains', () => {
+    // Missing origin (curl, mobile, server-to-server) is allowed
+    expect(isAllowedOrigin(undefined)).toBe(true);
+
+    // Exact production domain is allowed in production
+    expect(isAllowedOrigin('https://travel-mate-plus.vercel.app', 'production')).toBe(true);
+
+    // Project preview deployments are allowed in production
+    expect(isAllowedOrigin('https://travel-mate-plus-preview-123.vercel.app', 'production')).toBe(true);
+    expect(isAllowedOrigin('https://travel-mate-plus-git-main.vercel.app', 'production')).toBe(true);
+
+    // Arbitrary third-party Vercel subdomains MUST be rejected in production
+    expect(isAllowedOrigin('https://malicious-attacker.vercel.app', 'production')).toBe(false);
+    expect(isAllowedOrigin('https://another-app.vercel.app', 'production')).toBe(false);
+
+    // Completely untrusted domains MUST be rejected
+    expect(isAllowedOrigin('https://unauthorized-attacker-site.com', 'production')).toBe(false);
+    expect(isAllowedOrigin('https://evil.com', 'development')).toBe(false);
+
+    // Localhost development server is allowed in non-production
+    expect(isAllowedOrigin('http://localhost:5173', 'development')).toBe(true);
+    expect(isAllowedOrigin('http://127.0.0.1:5173', 'development')).toBe(true);
   });
 });

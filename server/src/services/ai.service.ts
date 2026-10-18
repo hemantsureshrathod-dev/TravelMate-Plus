@@ -32,7 +32,7 @@ export async function generateItineraryPlan(
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = env.GEMINI_MODEL || 'gemini-1.5-flash';
+  const modelName = env.GEMINI_MODEL || 'gemini-flash-latest';
 
   const model = genAI.getGenerativeModel({
     model: modelName,
